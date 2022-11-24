@@ -45,7 +45,7 @@
   #?(:clj (.isFile (io/file filepath))
      :cljs (.isFile (fs/lstatSync filepath))))
 
-(defn exists?
+(defn exists-?
   [filepath]
   #?(:clj (.exists (io/file filepath))
      :cljs (fs/existsSync filepath)))
@@ -186,7 +186,7 @@
   ([text] (set-clipboard-content text false)))
 
 (defn pretty-exception
-  [e]
+  #?(:cljs [^js e] :clj [e])
   (let [message (.getMessage e)
         cause (.getCause e)
         stacklines (map str (.getStackTrace e))
@@ -220,7 +220,8 @@
 
 (defn get-ns-by-name
   [name]
-  (->> (all-ns)
+  (->> nil
+  ;;  (all-ns)
        (filter #(= (-> % ns-name str) name))
        (first)))
 

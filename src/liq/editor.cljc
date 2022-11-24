@@ -1,6 +1,8 @@
 (ns liq.editor
   (:require [clojure.string :as str]
             ;#?(:cljs [lumo.io :as io :refer [slurp spit]])
+ #?(:cljs [goog.string :as gstring]
+    [goog.string.format])
             [liq.util :as util]
             [liq.highlighter :as highlighter]
             [liq.buffer :as buffer]))
@@ -182,7 +184,7 @@
      (if (number? idname)
        (swap! state update-in [::buffers idname] (buffer/ensure-buffer-fun fun))
        (apply-to-buffer (get-buffer-id-by-name idname) fun))
-     (catch Exception e (swap! exceptions conj (util/pretty-exception e)))))
+     (catch #?(:clj Exception :cljs :default) e (swap! exceptions conj (util/pretty-exception e)))))
   ([fun] (apply-to-buffer (current-buffer-id) fun)))
 
 (comment
@@ -228,7 +230,7 @@
      (let [buf (get-buffer nameid)
            cols (((-> @state ::output-handler :dimensions)) :cols) 
            namepart (util/shorten-path (or (buf ::buffer/filename) (buf ::buffer/name)) (max 10 (- cols 36)))
-           spaces (format (str "%-" (max 1 (- cols (count namepart) 36)) "s") "")
+           spaces (#?(:clj format :cljs gstring/format) (str "%-" (max 1 (- cols (count namepart) 36)) "s") "")
            pct (int (/ (* 100.0 (-> buf ::buffer/cursor ::buffer/row)) (-> buf ::buffer/lines count)))]
        (apply-to-buffer "*status-line*"
          #(-> %
@@ -296,7 +298,8 @@
   (paint-buffer "*output*")
   (when (and view (get-setting :auto-switch-to-output))
     (switch-to-buffer "*output*")
-    (when timer (future (Thread/sleep timer) (previous-buffer) (paint-buffer))))
+    ;; (when timer (future (Thread/sleep timer) (previous-buffer) (paint-buffer)))
+    )
   (paint-buffer))
 
 (defn handle-stdout
@@ -422,7 +425,7 @@
              (not (and @tmp-keymap (@tmp-keymap :selfinsert)))
              (contains? #{"1" "2" "3" "4" "5" "6" "7" "8" "9" "0"} c)
              (not (and (= c "0") (= (@state ::repeat-counter) 0))))
-      (do (swap! state update ::repeat-counter (fn [t] (+ (* 10 t) (Integer/parseInt c))))
+      (do (swap! state update ::repeat-counter (fn [t] (+ (* 10 t) (#?(:clj Integer/parseInt :cljs js/parseInt) c))))
           nil)
       (let [mode (buf ::buffer/mode)
             major-modes (buf ::buffer/major-modes)

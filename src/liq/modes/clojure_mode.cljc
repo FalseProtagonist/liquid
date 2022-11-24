@@ -24,7 +24,7 @@
   [buf]
   (let [n (or (get-namespace buf) "user")
         funs (map str (repl/apropos ""))
-        al (ns-aliases (symbol n))]
+        al (#?(:clj ns-aliases :cljs identity) (symbol n))]
     (map #(str/replace % "clojure.core/" "")
       (reduce (fn [l [short full]] (map #(maybe-shorten % (str full) short) l))
               funs
@@ -32,7 +32,8 @@
 
 (defn property-classpath
   []
-  (.split (System/getProperty "java.class.path") (System/getProperty "path.separator")))
+  #?(:clj (.split (System/getProperty "java.class.path") (System/getProperty "path.separator"))
+     :cljs nil))
 
 (defn classloaders-classpath
   []
@@ -59,7 +60,7 @@
     (some->> (-> buf buffer/left buffer/word)
              (re-find #"\w.*\w\??!?")
              (symbol)
-             (ns-resolve buffer-ns))))
+             #_(ns-resolve buffer-ns))))
 
 (defn goto-var
   [file var]
@@ -76,8 +77,8 @@
       (if-some [file (file-of-var var)]
         (goto-var file var)
         (editor/message "Cannot find var for this."))
-      (editor/message "Cannot find source file for this."))
-    (catch Exception e
+      (editor/message "Cannot find source file for this.")) 
+    (catch #?(:clj Exception :cljs :default) e
       (editor/message (str e)))))
 
 (defn goto-definition-local
